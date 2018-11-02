@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# <UDF name="SSH_PORT" Label="SSH Port" />
+# <UDF name="SSH_PUBKEY" Label="Root's SSH Public Key" />
+# <UDF name="FWKNOP_ACCESS_PORTS" Label="Ports that users are authorized to open via SPA (ie. tcp/22,tcp/2222)" />
+# <UDF name="FWKNOP_KEY" Label="ASCII encryption key for SPA packets" />
+# <UDF name="FWKNOP_REQ_USER" Label="Users that are authorized for SPA authentication (ie. alice,bob)" />
+# <UDF name="FWKNOP_PCAP_FILTER_PORT" Label="Destination UDP port for SPA packets (ie. 888)" />
+
+# for debugging
+touch /root/.bootstrap_started
+
+# disable SELinux.
+# TODO: take another look to see if we can make selinux work
+setenforce 0
+sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+
+# harden/optimize SSH
+mkdir -m 0700 /root/.ssh
+echo "$SSH_PUBKEY" > /root/.ssh/authorized_keys
+chmod 644 /root/.ssh/authorized_keys
+sed -i "s/^.*Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config
+sed -i "s/^PermitRootLogin .*/PermitRootLogin prohibit-password/" /etc/ssh/sshd_config
+sed -i "s/^PasswordAuthentication .*/PasswordAuthentication no/" /etc/ssh/sshd_config
+sed -i "s/^X11Forwarding .*/X11Forwarding no/" /etc/ssh/sshd_config
+sed -i "s/^.*UseDNS .*/UseDNS no/" /etc/ssh/sshd_config
+
+# these commands are disabled since we are delegating access control to fwknop (below)
+#firewall-cmd --permanent --add-port=${SSH_PORT}/tcp
+#firewall-cmd --add-port=${SSH_PORT}/tcp
+
+# this is our last chance to access ssh with the original daemon configuration
+sleep 10
+service sshd restart
+
+# update to latest packages
+yum update -y
+
+# install fwknop
+yum install -y fwknop
+
+# configure fwknop access
+cat > /etc/fwknop/access.conf << EOF
+SOURCE:                 ANY
+OPEN_PORTS:             $FWKNOP_ACCESS_PORTS
+KEY:                    $FWKNOP_KEY
+FW_ACCESS_TIMEOUT:      120
+REQUIRE_USERNAME:       $FWKNOP_REQ_USER
+REQUIRE_SOURCE_ADDRESS: Y
+EOF
+
+# configure fwknop daemon behavior
+cat > /etc/fwknop/fwknopd.conf << EOF
+PCAP_INTF                   eth0;
+ENABLE_PCAP_PROMISC         N;
+PCAP_FILTER                 udp port $FWKNOP_PCAP_FILTER_PORT;
+ENABLE_SPA_PACKET_AGING     Y;
+MAX_SPA_PACKET_AGE          120;
+ENABLE_DIGEST_PERSISTENCE   Y;
+MAX_SNIFF_BYTES             1500;
+SYSLOG_IDENTITY             fwknopd;
+SYSLOG_FACILITY             LOG_DAEMON;
+FWKNOP_RUN_DIR              /var/run/fwknop;
+FWKNOP_CONF_DIR             /etc/fwknop;
+ACCESS_FILE                 /etc/fwknop/access.conf;
+FWKNOP_PID_FILE             \$FWKNOP_RUN_DIR/fwknopd.pid;
+DIGEST_FILE                 \$FWKNOP_RUN_DIR/digest.cache;
+EOF
+
+# note: it will take about 3-5 minutes before we can access the host
+# due to yum update
+service fwknopd restart
+
+# install ansible (note: ansible 2.5+ supports python 3.5+)
+pip3 install --upgrade pip
+pip3 install ansible==2.5.10
+
+# for debugging
+touch /root/.bootstrap_ended

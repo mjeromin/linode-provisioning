@@ -1,78 +1,51 @@
 #!/usr/bin/env bash
-# <UDF name="SSH_PORT" Label="SSH Port" />
-# <UDF name="SSH_PUBKEY" Label="Root's SSH Public Key" />
-# <UDF name="FWKNOP_ACCESS_PORTS" Label="Ports that users are authorized to open via SPA (ie. tcp/22,tcp/2222)" />
-# <UDF name="FWKNOP_KEY" Label="ASCII encryption key for SPA packets" />
-# <UDF name="FWKNOP_REQ_USER" Label="Users that are authorized for SPA authentication (ie. alice,bob)" />
-# <UDF name="FWKNOP_PCAP_FILTER_PORT" Label="Destination UDP port for SPA packets (ie. 888)" />
+#
+# This stackscript will download a private git repo and then execute a second stage script
+# within the repo named "bootstrap-fedora.sh".  It is assumed that subsequent changes will
+# be delegated to configuration management (ie. ansible, puppet, chef, etc.) and that vaulted
+# secrets can be decrypted using password in variable VAULT_PASSWORD.
+#<UDF name="GIT_REPO" label="Git repository" />
+#<UDF name="GIT_BRANCH" label="Git repository branch" />
+#<UDF name="GIT_ACCESS_KEY64" label="(unencrypted) Git access key to pull repo" />
+#<UDF name="VAULT_PASSWORD" label="Password used to decrypt vault protected files" />
 
-# for debugging
 touch /root/.bootstrap_started
 
-# disable SELinux.
-# TODO: take another look to see if we can make selinux work
-setenforce 0
-sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+# install git client
+yum install -y git  | tee -a /root/.bootstrap_stdout
+[[ $? -ne 0 ]] && echo "ERROR: yum install git" >> /root/.bootstrap_error
 
-# harden/optimize SSH
-mkdir -m 0700 /root/.ssh
-echo "$SSH_PUBKEY" > /root/.ssh/authorized_keys
-chmod 644 /root/.ssh/authorized_keys
-sed -i "s/^.*Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config
-sed -i "s/^PermitRootLogin .*/PermitRootLogin prohibit-password/" /etc/ssh/sshd_config
-sed -i "s/^PasswordAuthentication .*/PasswordAuthentication no/" /etc/ssh/sshd_config
-sed -i "s/^X11Forwarding .*/X11Forwarding no/" /etc/ssh/sshd_config
-sed -i "s/^.*UseDNS .*/UseDNS no/" /etc/ssh/sshd_config
+# install vault password
+echo $VAULT_PASSWORD > /root/.vault_pass
 
-# these commands are disabled since we are delegating access control to fwknop (below)
-#firewall-cmd --permanent --add-port=${SSH_PORT}/tcp
-#firewall-cmd --add-port=${SSH_PORT}/tcp
+# install ssh access key
+echo "$GIT_ACCESS_KEY64" | base64 -d > /root/.ssh/id_rsa_git
+chmod 0600 /root/.ssh/id_rsa_git
 
-# this is our last chance to access ssh with the original daemon configuration
-sleep 10
-service sshd restart
+# stash git parameters as environment variables
+echo "export GIT_REPO=\"$GIT_REPO\"" >> /root/.bash_profile
+echo "export GIT_BRANCH=\"$GIT_BRANCH\"" >> /root/.bash_profile
 
-# update to latest packages
-yum update -y
-
-# install fwknop
-yum install -y fwknop
-
-# configure fwknop access
-cat > /etc/fwknop/access.conf << EOF
-SOURCE:                 ANY
-OPEN_PORTS:             $FWKNOP_ACCESS_PORTS
-KEY:                    $FWKNOP_KEY
-FW_ACCESS_TIMEOUT:      120
-REQUIRE_USERNAME:       $FWKNOP_REQ_USER
-REQUIRE_SOURCE_ADDRESS: Y
+# setup so that our private key and github's public hostkey is used
+cat > /root/.ssh/config << EOF
+Host *
+    IdentityFile /root/.ssh/id_rsa_git
+    StrictHostKeyChecking no
+    IdentitiesOnly yes
+EOF
+cat > /root/.ssh/known_hosts << EOF 
+github.com,* ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==
 EOF
 
-# configure fwknop daemon behavior
-cat > /etc/fwknop/fwknopd.conf << EOF
-PCAP_INTF                   eth0;
-ENABLE_PCAP_PROMISC         N;
-PCAP_FILTER                 udp port $FWKNOP_PCAP_FILTER_PORT;
-ENABLE_SPA_PACKET_AGING     Y;
-MAX_SPA_PACKET_AGE          120;
-ENABLE_DIGEST_PERSISTENCE   Y;
-MAX_SNIFF_BYTES             1500;
-SYSLOG_IDENTITY             fwknopd;
-SYSLOG_FACILITY             LOG_DAEMON;
-FWKNOP_RUN_DIR              /var/run/fwknop;
-FWKNOP_CONF_DIR             /etc/fwknop;
-ACCESS_FILE                 /etc/fwknop/access.conf;
-FWKNOP_PID_FILE             \$FWKNOP_RUN_DIR/fwknopd.pid;
-DIGEST_FILE                 \$FWKNOP_RUN_DIR/digest.cache;
-EOF
+# clone the repo into /rootgit_repo
+git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo | tee -a /root/.bootstrap_stdout
+[[ $? -ne 0 ]] && echo "ERROR: git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo" >> /root/.bootstrap_error
 
-# note: it will take about 3-5 minutes before we can access the host
-# due to yum update
-service fwknopd restart
+# trigger second stage bootstrap script
+cd /root/git_repo && ./bootstrap-fedora.sh  $LINODE_ID  | tee -a /root/.bootstrap_stdout
+[[ $? -ne 0 ]] && echo "ERROR: /root/git_repo/bootstrap-fedora.sh $LINODE_ID" >> /root/.bootstrap_error
 
-# install ansible (note: ansible 2.5+ supports python 3.5+)
-pip3 install --upgrade pip
-pip3 install ansible==2.5.10
+# cleanup
+[[ ! -e /root/.bootstrap_error ]] && rm -rf /root/git_repo
 
-# for debugging
 touch /root/.bootstrap_ended

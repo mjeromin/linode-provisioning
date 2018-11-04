@@ -41,5 +41,5 @@
     - name: Ensure root ssh key
       authorized_key:
         user: root
-        key: "{{ lookup('file', './id_rsa_root.pub') }}"
+        key: "{{ lookup('file', 'files/id_rsa_root.pub') }}"
         exclusive: yes

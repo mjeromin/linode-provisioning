@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-#<UDF name="GIT_REPO" label="Git repository" />
-#<UDF name="GIT_BRANCH" label="Git repository branch" />
-#<UDF name="GIT_ACCESS_KEY64" label="(unencrypted) Git access key to pull repo" />
-#<UDF name="VAULT_PASSWORD" label="Password used to decrypt vault protected files" />
+#<UDF name="GIT_REPO" label="The git repository where second stage scripts can be pulled via HTTPS / SSH." example="https://github.com/mjeromin/linode-provisioning.git" />
+#<UDF name="GIT_BRANCH" label="The git repository branch where second stage scripts can be pulled." default="master" />
+#<UDF name="GIT_ACCESS_KEY64" label="An unencrypted, base64 encoded RSA private access key to pull the git repo if using SSH." default="" />
+#<UDF name="VAULT_PASSWORD" label="The password that can be used to decrypt vault files (ie. ansible-vault)." default="" />
 
 touch /root/.stage1_started
 
@@ -12,15 +12,16 @@ yum install -y git  | tee -a /root/.stage1_stdout
 [[ $? -ne 0 ]] && echo "ERROR: yum install git" >> /root/.stage1_error
 
 # install vault password
-echo $VAULT_PASSWORD > /root/.vault_pass
+[[ -n "$VAULT_PASSWORD" ]] && \
+	echo $VAULT_PASSWORD > /root/.vault_pass
 
 # install ssh access key
-echo "$GIT_ACCESS_KEY64" | base64 -d > /root/.ssh/id_rsa_git
-chmod 0600 /root/.ssh/id_rsa_git
-cat > /root/.ssh/config << EOF
-Host *
-    IdentityFile /root/.ssh/id_rsa_git
-EOF
+if [[ -n "$GIT_ACCESS_KEY64" ]]; then
+    echo "$GIT_ACCESS_KEY64" | base64 -d > /root/.ssh/id_rsa_git
+    chmod 0600 /root/.ssh/id_rsa_git
+    echo "Host *" > /root/.ssh/config
+    echo "  IdentityFile /root/.ssh/id_rsa_git" >> /root/.ssh/config
+fi
 
 # install github's public hostkey
 cat > /root/.ssh/known_hosts << EOF 

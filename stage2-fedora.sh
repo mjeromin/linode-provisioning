@@ -35,4 +35,15 @@ pip3 install --upgrade pip
 
 # run ansible bootstrap playbook
 mkdir /var/lib/ansible/local
-ansible-pull --vault-password-file=/root/.vault_pass --checkout=${GIT_BRANCH} -d /var/lib/ansible/local -i localhost, -U $GIT_REPO
+if [ -r /root/.vault_pass ]; then
+    ansible-pull --vault-password-file=/root/.vault_pass \
+                 --checkout=${GIT_BRANCH} \
+                 -d /var/lib/ansible/local \
+                 -i localhost, \
+                 -U $GIT_REPO
+else
+    ansible-pull --checkout=${GIT_BRANCH} \
+                 -d /var/lib/ansible/local \
+                 -i localhost, \
+                 -U $GIT_REPO
+fi

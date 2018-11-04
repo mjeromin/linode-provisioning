@@ -1,0 +1,45 @@
+---
+- name: Common 
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    schedule: '*/5 * * * *'
+    cron_user: root
+    logfile: /var/log/ansible-pull.log
+    workdir: /var/lib/ansible/local
+
+  tasks:
+
+    - name: Check that required facts are defined
+      assert: { that: "{{ item }} is defined" }
+      with_items:
+        - hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_REPO
+        - hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_BRANCH
+
+    - name: Shorter facts for sanity
+      set_fact:
+        git_repo: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_REPO }}"
+        git_branch: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_BRANCH }}"
+
+    - name: Ensure working directory exists
+      file:
+        path: "{{ workdir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0751'
+
+    - name: Ensure crontab entry for pulling repository
+      template:
+        src: etc_cron.d_ansible-pull.j2
+        dest: /etc/cron.d/ansible-pull
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure root ssh key
+      authorized_key:
+        user: root
+        key: "{{ lookup('file', './id_rsa_root.pub') }}"
+        exclusive: yes

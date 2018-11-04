@@ -1,4 +1,4 @@
 # Cron job to git clone/pull a repo and then run locally
 
-{{ schedule }} {{ cron_user }} /usr/local/bin/ansible-pull --accept-host-key --only-if-changed --vault-password-file=/root/.vault_pass --checkout={{ git_branch }} --clean -d {{ workdir }} -i localhost, -U {{ git_repo }} >> {{ logfile }} 2>&1
+{{ schedule }} {{ cron_user }} /usr/local/bin/ansible-pull --only-if-changed --vault-password-file=/root/.vault_pass --checkout={{ git_branch }} --clean -d {{ workdir }} -i localhost, -U {{ git_repo }} >> {{ logfile }} 2>&1
 

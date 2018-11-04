@@ -10,10 +10,10 @@ touch /root/.stage1_started
 # install git client
 if ! command -v apt-get &> /dev/null; then
     yum install -y git  | tee -a /root/.stage1_stdout
-    [[ $? -ne 0 ]] && echo "ERROR: yum install -y git" >> /root/.stage1_error
+    [[ ${PIPESTATUS[0]} -ne 0 ]] && echo "ERROR: yum install -y git" >> /root/.stage1_error
 else
     apt-get install -y git | tee -a /root/.stage1_stdout
-    [[ $? -ne 0 ]] && echo "ERROR: apt-get install -y git" >> /root/.stage1_error
+    [[ ${PIPESTATUS[0]} -ne 0 ]] && echo "ERROR: apt-get install -y git" >> /root/.stage1_error
 fi
 
 # install vault password
@@ -35,14 +35,14 @@ EOF
 
 # clone the repo
 git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo | tee -a /root/.stage1_stdout
-[[ $? -ne 0 ]] && \
+[[ ${PIPESTATUS[0]} -ne 0 ]] && \
     echo "ERROR: git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo" >> /root/.stage1_error
 
 # trigger second stage2  script
 /root/git_repo/stage2.sh  id="${LINODE_ID}" \
                                  git_repo="${GIT_REPO}" \
                                  git_branch="${GIT_BRANCH}" | tee -a /root/.stage1_stdout
-[[ $? -ne 0 ]] && \
+[[ ${PIPESTATUS[0]} -ne 0 ]] && \
     echo ERROR: /root/git_repo/stage2.sh id=${LINODE_ID} \
                                                 git_repo=${GIT_REPO} \
                                                 git_branch=${GIT_BRANCH} >> /root/.stage1_error

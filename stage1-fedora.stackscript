@@ -5,11 +5,11 @@
 #<UDF name="GIT_ACCESS_KEY64" label="(unencrypted) Git access key to pull repo" />
 #<UDF name="VAULT_PASSWORD" label="Password used to decrypt vault protected files" />
 
-touch /root/.bootstrap_started
+touch /root/.stage1_started
 
 # install git client
-yum install -y git  | tee -a /root/.bootstrap_stdout
-[[ $? -ne 0 ]] && echo "ERROR: yum install git" >> /root/.bootstrap_error
+yum install -y git  | tee -a /root/.stage1_stdout
+[[ $? -ne 0 ]] && echo "ERROR: yum install git" >> /root/.stage1_error
 
 # install vault password
 echo $VAULT_PASSWORD > /root/.vault_pass
@@ -28,21 +28,21 @@ github.com,* ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+P
 EOF
 
 # clone the repo
-git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo | tee -a /root/.bootstrap_stdout
+git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo | tee -a /root/.stage1_stdout
 [[ $? -ne 0 ]] && \
-    echo "ERROR: git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo" >> /root/.bootstrap_error
+    echo "ERROR: git clone -b $GIT_BRANCH $GIT_REPO /root/git_repo" >> /root/.stage1_error
 
-# trigger second stage bootstrap script
-/root/git_repo/bootstrap-fedora.sh  id="${LINODE_ID}" \
-                                    git_repo="${GIT_REPO}" \
-                                    git_branch="${GIT_BRANCH}" | tee -a /root/.bootstrap_stdout
+# trigger second stage2  script
+/root/git_repo/stage2-fedora.sh  id="${LINODE_ID}" \
+                                 git_repo="${GIT_REPO}" \
+                                 git_branch="${GIT_BRANCH}" | tee -a /root/.stage1_stdout
 [[ $? -ne 0 ]] && \
-    echo ERROR: /root/git_repo/bootstrap-fedora.sh id=${LINODE_ID} \
-                                                   git_repo=${GIT_REPO} \
-                                                   git_branch=${GIT_BRANCH} >> /root/.bootstrap_error
+    echo ERROR: /root/git_repo/stage2-fedora.sh id=${LINODE_ID} \
+                                                git_repo=${GIT_REPO} \
+                                                git_branch=${GIT_BRANCH} >> /root/.stage1_error
 
 # cleanup
-[[ ! -e /root/.bootstrap_error ]] && \
+[[ ! -e /root/.stage1_error ]] && \
     rm -rf /root/git_repo
 
-touch /root/.bootstrap_ended
+touch /root/.stage1_ended

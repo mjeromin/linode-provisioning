@@ -18,6 +18,11 @@ case $i in
 esac
 done
 
+if [[ -z "$GIT_REPO" ]] || [[ -z "$GIT_BRANCH" ]]; then
+    echo "USAGE: $0 git_repo=<git_repo_url> git_branch=<branch_name> [id=<linode_id>]"
+    exit 1
+fi
+
 # stash parameters as Ansible facts
 mkdir -p /etc/ansible/facts.d
 cat > /etc/ansible/facts.d/bootstrap.fact << EOF
@@ -47,3 +52,5 @@ else
                  -i localhost, \
                  -U $GIT_REPO
 fi
+
+exit 0

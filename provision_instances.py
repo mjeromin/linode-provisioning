@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 
 DEBUG = 0
-CONFIG_FILE = 'config.yml'
+DEFAULT_CONFIG_FILE = 'config.yml'
+
+import sys
+
+try:
+    from argparse import ArgumentParser
+except ImportError:
+    print("Please install argparse.")
+    exit(1)
 
 try:
     from yaml import load, dump, YAMLError
@@ -16,6 +24,17 @@ try:
 except ImportError:
     print("Please install linode-api4.")
     exit(1)
+
+def parse_args(args):
+    """Parse a list of command-line args via argparse and return them in dict format."""
+
+    parser = ArgumentParser(description='Provision VM instances based on YAML configuration.')
+    parser.add_argument('--config',
+                        dest='config_file',
+                        default=DEFAULT_CONFIG_FILE,
+                        help='specify YAML configuration filename. DEFAULT=config.yml'
+                       )
+    return vars(parser.parse_args(args))
 
 def load_config(config_file):
     """Readin config_file, load YAML into dictionary, then return config dict. """
@@ -70,7 +89,9 @@ def get_stackscript(label, client):
 
     return(stackscript)
 
-config = load_config(CONFIG_FILE)
+#  we don't care about sysargv[0], the invoked command name
+args = parse_args(sys.argv[1:])
+config = load_config(args['config_file'])
 client = LinodeClient(config['api_token'])
 stackscript = get_stackscript(config['stackscript_label'], client)
 

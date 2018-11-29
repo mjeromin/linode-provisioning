@@ -11,17 +11,7 @@ except ImportError:
 
 try:
     from linode_api4 import LinodeClient
-except ImportError:
-    print("Please install linode-api4.")
-    exit(1)
-
-try:
     from linode_api4.objects.filtering import Filter
-except ImportError:
-    print("Please install linode-api4.")
-    exit(1)
-
-try:
     from linode_api4.errors import ApiError, UnexpectedResponseError
 except ImportError:
     print("Please install linode-api4.")

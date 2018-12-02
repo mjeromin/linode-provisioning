@@ -8,6 +8,14 @@
     cron_user: root
     logfile: /var/log/ansible-pull.log
     workdir: /var/lib/ansible/local
+    default_nonroot_user: mjeromin
+    default_starter_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65343838616231633239636566376131396662633061366231353739303031646233343064323838
+          3233356161343864636136613032646262636165393065630a326533333864353530663432306433
+          61363261636631396630366537346364393863666161306262346661613637326338386438353731
+          3366626235386364660a336466666261623034376265616437656566326438663866353265633831
+          3037
 
   tasks:
     - name: Check that required facts are defined
@@ -20,6 +28,9 @@
       set_fact:
         git_repo: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_REPO }}"
         git_branch: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_BRANCH }}"
+        # We need to decrypt the default_starter_password value first before it
+        # can be used in the password_hash filter.
+        starter_password: "{{ default_starter_password }}"
 
     - name: Ensure working directory exists
       file:
@@ -51,6 +62,15 @@
         line: 'TrustedUserCAKeys /etc/ssh/ca.pub'
       notify:
         - reload sshd
+
+    - name: Ensure non-root user exists with sudo privileges
+      user:
+        name: "{{ default_nonroot_user }}"
+        password: "{{ starter_password | password_hash('sha512', 'SaltStack') }}"
+        update_password: on_create
+        state: present
+        shell: /bin/bash
+        groups: wheel
 
   handlers:
   - name: reload sshd

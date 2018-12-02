@@ -14,10 +14,10 @@ It will download the private git repo and then execute a second stage script wit
 This is the second stage bootstrap script, intended to setup configuration management. It will accept three parameters (`GIT_REPO`, `GIT_BRANCH`, `LINODE_ID`), install ansible, and kick off ansible-pull. 
 
 ## local.yml
-This is the common ansible playbook for all hosts that pull this repo via ansible-pull. At the very least, it will install a cronjob to ensure future ansible-pulls. For something more specific, ansible-pull allows yaml files named after the hostname (which will override local.yml).
+This is the common ansible playbook for all hosts that pull this repo via ansible-pull. At the very least, it will configure SSH and install a cronjob to ensure future ansible-pulls. For something more specific, ansible-pull allows yaml files named after the hostname (which will override local.yml).
 
 ### Trusted User CA Keys
-Instead of installing public keys in each user's authorized_keys, Ansible will install a public CA key under `/etc/ssh/ca.pub`. Users can login using ssh keys signed by this. There is a great write-up on [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/), but once you have created a CA key, add the public portion to **templates/ca.pub**. There are some trade-offs with manageability, ie.: securing the CA public key, expiration dates for key signatures and/or managing a revokation list, implementing secure signing workflows. But in return you will have a login management system that is easy to scale, easy to manage with a dynamic set of users that shrinks/grows unpredictably, and doesn't come with SPOF like LDAP and/or Kerberos.
+Instead of installing public keys in each user's authorized_keys, local.yml will install a public CA key under `/etc/ssh/ca.pub`. Users can login using ssh keys that are signed by this CA. There are great write-ups on [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/) and [this page](https://medium.com/uber-security-privacy/introducing-the-uber-ssh-certificate-authority-4f840839c5cc), but once you have created a CA key, add the public portion to your **templates/ca.pub**.
 
 #### Quick-Start: Creating a CA key
 ```
@@ -29,9 +29,9 @@ to lock-down access to your **ca** file (ie. 0400 permissions, root ownership).
 
 #### Quick-Start: Signing a user key
 ```
-$ ssh-keygen -s ca -I mjeromin -V +1w -z 1 id_rsa.pub
+$ ssh-keygen -s ca -I mjeromin -V +1w -z 1 -n root,mjeromin id_rsa.pub
 ```
-This command uses the private CA key stored in the **ca** file to sign the public portion of the user SSH keypair, **id_rsa.pub**. The certificate ID will be **mjeromin**. You can restrict the user accounts and machines this key is authorized to login to, take a look at [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/). 
+This command uses the private CA key stored in the **ca** file to sign the public portion of the user SSH keypair, **id_rsa.pub**. The certificate ID will be **mjeromin** (named after the user ID), the signature is valid for 1 week, the signature serial number is "1", and the certificate is valid for login to usernames (aka. principals): root and mjeromin -- assuming principals have been enabled in **sshd_config**. There are other ways we can apply restrictions on the usage of signed keys, take a look at [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/) or the [man page](https://www.freebsd.org/cgi/man.cgi?query=ssh-keygen&sektion=1&manpath=OpenBSD). 
 
 ## provision_instances.py
 Using Linode API v4, this script will provision VM instances based on YAML configuration found in a file named **config.yml** in the same directory. An example is included as filename **config.yml.example**.

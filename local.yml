@@ -10,7 +10,6 @@
     workdir: /var/lib/ansible/local
 
   tasks:
-
     - name: Check that required facts are defined
       assert: { that: "{{ item }} is defined" }
       with_items:
@@ -38,8 +37,23 @@
         group: root
         mode: '0644'
 
-    - name: Ensure root ssh key
-      authorized_key:
-        user: root
-        key: "{{ lookup('file', 'files/id_rsa_root.pub') }}"
-        exclusive: yes
+    - name: Ensure CA public key is installed
+      template:
+        src: ca.pub
+        dest: /etc/ssh/ca.pub
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure SSHD for Trusted User CA Keys
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: 'TrustedUserCAKeys /etc/ssh/ca.pub'
+      notify:
+        - reload sshd
+
+  handlers:
+  - name: reload sshd
+    service:
+      name: sshd
+      state: reloaded

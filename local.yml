@@ -56,10 +56,26 @@
         group: root
         mode: '0644'
 
-    - name: Configure SSHD for Trusted User CA Keys
+    - name: Configure SSH daemon for Trusted User CA Keys
       lineinfile:
         path: /etc/ssh/sshd_config
         line: 'TrustedUserCAKeys /etc/ssh/ca.pub'
+      notify:
+        - reload sshd
+
+    - name: General hardening of SSH daemon
+      lineinfile:
+        state: "{{ item.state | default('present') }}"
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regex | default(omit) }}"
+        line: "{{ item.line | default(omit) }}"
+      with_items:
+        - { regex: '^#.*', state: 'absent' }
+        - { regex: '^$', state: 'absent' }
+        - { regex: '^PermitRootLogin .*', line: 'PermitRootLogin no' }
+        - { regex: '^PasswordAuthentication .*', line: 'PasswordAuthentication no' }
+        - { regex: '^X11Forwarding .*', line: 'X11Forwarding no' }
+        - { line: 'UseDNS no' }
       notify:
         - reload sshd
 

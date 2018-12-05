@@ -34,7 +34,20 @@ $ ssh-keygen -s ca -I mjeromin -V +1w -z 1 -n root,mjeromin id_rsa.pub
 This command uses the private CA key stored in the **ca** file to sign the public portion of the user SSH keypair, **id_rsa.pub**. The certificate ID will be **mjeromin** (named after the user ID), the signature is valid for 1 week, the signature serial number is "1", and the certificate is valid for login to usernames (aka. principals): root and mjeromin -- assuming principals have been enabled in **sshd_config**. There are other ways we can apply restrictions on the usage of signed keys, take a look at [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/) or the [man page](https://www.freebsd.org/cgi/man.cgi?query=ssh-keygen&sektion=1&manpath=OpenBSD). 
 
 ## provision_instances.py
-Using Linode API v4, this script will provision VM instances based on YAML configuration found in a file named **config.yml** in the same directory. An example is included as filename **config.yml.example**.
+Using Linode API v4, this script will provision VM instances based on YAML configuration found in a file named **config.yml** in the same directory. An example is included as filename **config.yml.example**. However, you can use a different filename for your configuration. For example:
+```
+./provision_instances.py --config dev.yml
+ssh root@xx.xxx.xx.xx [id: linodexxxxxxxx]
+Current instances: 1
+- linodexxxxxxxx
+```
 
 ## contrib/config-helper.sh
 Using Linode API v4, this script will help list details of public images, instance types, and regions.
+```
+contrib/config-helper.sh [images|sizes|regions]
+
+images: prints a list of public images.
+sizes: prints a collection of Linode Types, including pricing and specifications.
+regions: prints the regions available for Linode services.
+```

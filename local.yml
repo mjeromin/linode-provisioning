@@ -4,6 +4,7 @@
   connection: local
   gather_facts: yes
   vars:
+    timezone: 'EST5EDT'
     schedule: '*/5 * * * *'
     cron_user: root
     logfile: /var/log/ansible-pull.log
@@ -18,21 +19,23 @@
           3037
 
   tasks:
+    # These facts should already exist from stage2 
     - name: Check that required facts are defined
       assert: { that: "{{ item }} is defined" }
       with_items:
         - hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_REPO
         - hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_BRANCH
 
-    - name: Shorter facts for sanity
+    - name: Set some facts
       set_fact:
+        # shorter names for readability
         git_repo: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_REPO }}"
         git_branch: "{{ hostvars.localhost.ansible_facts.ansible_local.bootstrap.ANSIBLE_GIT_BRANCH }}"
         # We need to decrypt the default_starter_password value first before it
         # can be used in the password_hash filter.
         starter_password: "{{ default_starter_password }}"
 
-    - name: Ensure working directory exists
+    - name: Ensure Ansible working directory exists
       file:
         path: "{{ workdir }}"
         state: directory
@@ -47,6 +50,22 @@
         owner: root
         group: root
         mode: '0644'
+
+    - name: Set timezone
+      timezone:
+        name: "{{ timezone }}"
+      notify:
+        - reload crond
+
+    - name: Ensure /etc/issue is installed
+      # IANAL but every bit helps
+      template:
+        src: etc_issue.j2
+        dest: "{{ item }}"
+        mode: '0644'
+      with_items:
+        - /etc/issue
+        - /etc/issue.net
 
     - name: Ensure CA public key is installed
       template:
@@ -63,22 +82,6 @@
       notify:
         - reload sshd
 
-    - name: General hardening of SSH daemon
-      lineinfile:
-        state: "{{ item.state | default('present') }}"
-        path: /etc/ssh/sshd_config
-        regexp: "{{ item.regex | default(omit) }}"
-        line: "{{ item.line | default(omit) }}"
-      with_items:
-        - { regex: '^#.*', state: 'absent' }
-        - { regex: '^$', state: 'absent' }
-        - { regex: '^PermitRootLogin .*', line: 'PermitRootLogin no' }
-        - { regex: '^PasswordAuthentication .*', line: 'PasswordAuthentication no' }
-        - { regex: '^X11Forwarding .*', line: 'X11Forwarding no' }
-        - { line: 'UseDNS no' }
-      notify:
-        - reload sshd
-
     - name: Ensure non-root user exists with sudo privileges
       user:
         name: "{{ default_nonroot_user }}"
@@ -88,8 +91,40 @@
         shell: /bin/bash
         groups: wheel
 
+    - name: General hardening of SSH daemon
+      lineinfile:
+        state: "{{ item.state | default('present') }}"
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regex | default(omit) }}"
+        line: "{{ item.line | default(omit) }}"
+      with_items:
+        # Remove comments as they make regex'ing harder
+        - { regex: '^#.*', state: 'absent' }
+        # Remove blank lines
+        - { regex: '^$', state: 'absent' }
+        # Do not permit root login
+        - { regex: '^PermitRootLogin .*', line: 'PermitRootLogin no' }
+        # Disable password authentication to stop brute force attacks
+        - { regex: '^PasswordAuthentication .*', line: 'PasswordAuthentication no' }
+        # Disable X11 forwarding, why is this not the default in some distros?
+        - { regex: '^X11Forwarding .*', line: 'X11Forwarding no' }
+        # UseDNS makes our logins slow
+        - { line: 'UseDNS no' }
+        # Use our /etc/issue.net as a banner, this is pre-login
+        - { line: 'Banner /etc/issue.net' }
+        # Permit logins from only this user, make sure this login exists before reloading sshd!
+        - { line: "AllowUsers {{ default_nonroot_user }}" }
+      validate: '/usr/sbin/sshd -t'
+      notify:
+        - reload sshd
+
   handlers:
-  - name: reload sshd
-    service:
-      name: sshd
-      state: reloaded
+    - name: reload sshd
+      service:
+        name: sshd
+        state: reloaded
+
+    - name: reload crond
+      service:
+        name: crond
+        state: reloaded

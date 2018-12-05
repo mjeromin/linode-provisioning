@@ -16,6 +16,8 @@ This is the second stage bootstrap script, intended to setup configuration manag
 ## local.yml
 This is the common ansible playbook for all hosts that pull this repo via ansible-pull. At the very least, it will configure SSH and install a cronjob to ensure future ansible-pulls. For something more specific, ansible-pull allows yaml files named after the hostname (which will override local.yml).
 
+Some additional tasks: Set timezone, SSH daemon config hardening, public SSH CA Key installed, non-root user added, ensure /etc/issue is installed.
+
 ### Trusted User CA Keys
 Instead of installing public keys in each user's authorized_keys, local.yml will install a public CA key under `/etc/ssh/ca.pub`. Users can login using ssh keys that are signed by this CA. There are great write-ups on [this page](https://code.fb.com/security/scalable-and-secure-access-with-ssh/) and [this page](https://medium.com/uber-security-privacy/introducing-the-uber-ssh-certificate-authority-4f840839c5cc), but once you have created a CA key, add the public portion to your **templates/ca.pub**.
 

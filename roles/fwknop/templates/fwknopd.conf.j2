@@ -1,0 +1,24 @@
+{% if fwknop_verbose -%}
+VERBOSE                     {{ fwknop_verbose }};
+{% endif -%}
+{% if fwknop_pcap_interface -%}
+PCAP_INTF                   {{ fwknop_pcap_interface }};
+{% endif -%}
+ENABLE_PCAP_PROMISC         N;
+{% if fwknop_pcap_filter -%}
+PCAP_FILTER                 {{ fwknop_pcap_filter }};
+{% endif -%}
+ENABLE_SPA_PACKET_AGING     {{ fwknop_enable_spa_packet_aging }};
+MAX_SPA_PACKET_AGE          {{ fwknop_max_spa_packet_age }};
+ENABLE_DIGEST_PERSISTENCE   Y;
+MAX_SNIFF_BYTES             1500;
+GPG_HOME_DIR                /root/.gnupg;
+GPG_EXE                     /usr/bin/gpg;
+SYSLOG_IDENTITY             fwknopd;
+SYSLOG_FACILITY             LOG_DAEMON;
+FWKNOP_RUN_DIR              /var/run/fwknop;
+FWKNOP_CONF_DIR             /etc/fwknop;
+ACCESS_FILE                 /etc/fwknop/access.conf;
+FWKNOP_PID_FILE             $FWKNOP_RUN_DIR/fwknopd.pid;
+DIGEST_FILE                 $FWKNOP_RUN_DIR/digest.cache;
+

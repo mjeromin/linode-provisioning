@@ -1,0 +1,21 @@
+SOURCE:                 {{ fwknop_sources }}
+DESTINATION:            {{ fwknop_destinations }}
+{% if fwknop_open_ports -%}
+OPEN_PORTS:             {{ fwknop_open_ports }}
+{% endif -%}
+FW_ACCESS_TIMEOUT:      {{ fwknop_access_timeout_default }}
+MAX_FW_TIMEOUT:         {{ fwknop_access_timeout_max }}
+{% if fwknop_username -%}
+REQUIRE_USERNAME:       {{ fwknop_username }}
+{% endif -%}
+REQUIRE_SOURCE_ADDRESS: {{ fwknop_require_source_address }}
+{% if fwknop_gpg_require_sig -%}  
+GPG_HOME_DIR            {{ fwknop_gpg_homedir }}
+GPG_DECRYPT_ID          {{ fwknop_decrypt_id }}
+GPG DECRYPT_PW          {{ fwknop_decrypt_pw }}
+GPG_REQUIRE_SIG         {{ fwknop_gpg_require_sig }}
+GPG_IGNORE_SIG_VERIFY_ERROR   {{ fwknop_ignore_sig_verify_error }}
+GPG_REMOTE_ID           {{ fwknop_gpg_remote_id }}
+{% else -%}
+KEY:                    {{ fwknop_access_key }}
+{% endif -%}

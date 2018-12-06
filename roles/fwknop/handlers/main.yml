@@ -1,0 +1,5 @@
+---
+- name: restart fwknopd daemon
+  service:
+    name: fwknopd
+    state: restarted

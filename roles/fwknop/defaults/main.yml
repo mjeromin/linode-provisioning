@@ -1,0 +1,131 @@
+# This defines the source address from which a SPA packet will be accepted.
+# Every  authorization stanza in this file must start  with  the  SOURCE
+# keyword. Networks should be specified in CIDR  (e.g. "192.168.10.0/24")
+# notation. Individual IP addresses can be specified as well.
+#
+# Also, multiple IP’s and/or networks can be defined as a comma-separated
+# list  (e.g. "192.168.10.0/24,10.1.1.123").
+#
+# The string "ANY" is also accepted if a valid authorization packet should
+# be honored from any source IP.
+fwknop_sources: "ANY"
+
+# This defines the destination address for which a SPA packet will be accepted.
+# Networks should be specified in CIDR  (e.g. "192.168.10.0/24") notation. 
+# Individual IP addresses can be specified as well.
+#
+# Also, multiple IP’s and/or networks can be defined as a comma-separated
+# list  (e.g. "192.168.10.0/24,10.1.1.123").
+#
+# The string "ANY" is also accepted if a valid authorization packet should
+# be honored to any destination IP.
+fwknop_destinations: "ANY"
+
+# Define a set of ports and protocols (tcp or udp) that are allowed to be
+# opened if a valid SPA packet is received and its access request matches
+# one of the entries here.
+#
+# If this entry is not set, then fwknopd will attempt to honor the request
+# specified in the SPA data.
+fwknop_open_ports:
+
+# Require a specific username from the client system as encoded in the SPA
+# data.  This variable is optional and if not specified, the username data
+# in the SPA data is ignored.
+fwknop_username:
+
+# Define the key used for decrypting an incoming SPA packet that is using
+# its built-in encryption (e.g. not GPG).  This variable is required for
+# all non-GPG-encrypted SPA packets. PLEASE, EITHER OVERRIDE THIS VALUE OR
+# DEFINE GPG VALUES, ie. fwknop_gpg_remote_id
+fwknop_access_key: 'c0mpl3x-ch405' 
+
+# Define the length of time access will be granted by fwknop through the
+# firewall after a valid SPA packet is received from the source IP address
+# that matches this stanza's SOURCE.
+fwknop_access_timeout_default: '60'
+
+# Define the maximum length of time access will be granted by fwknop through
+# the firewall after a valid SPA packet is received. This is mostly useful to
+# ensure that clients using the --fw-timeout argument do not grant themselves
+# unduly long access.
+fwknop_access_timeout_max: '300'
+
+# Force all SPA packets to contain a real IP address within the encrypted
+# data.  This makes it impossible to use the "-s" command line argument
+# on the fwknop client command line, so either "-R" has to be used to
+# automatically resolve the external address (if the client is behind a
+# NAT) or the client must know the external IP.
+fwknop_require_source_address: 'Y'
+
+# Define a list of gpg key ID’s that are required to have signed any
+# incoming SPA messages that have been encrypted with the fwknopd server
+# key.  This ensures that the verification of the remote user is accomplished
+# via a strong cryptographic mechanism. This setting only applies if the
+# GPG_REQUIRE_SIG is set to 'Y'.
+fwknop_gpg_remote_id:
+
+# Define the path to the GnuPG directory to be used by fwknopd.  If this
+# keyword is not specified here, then fwknopd will default to using the
+# "/root/.gnupg" directory for the server key(s).
+fwknop_gpg_homedir:
+
+# Define a GnuPG key ID to use for decrypting SPA messages that have been
+# encrypted by an fwknop client using GPG.  This keyword is required for
+# authentication that is based on gpg keys.  The gpg key ring on the client
+# must have imported and signed the fwknopd server key, and vice versa.
+#
+# It is ok to use a sensitive personal gpg key on the client, but each
+# fwknopd server should have its own gpg key that is generated specifically
+# for fwknop communications.  The reason for this is that this decryption
+# password within this file.
+#
+# Note that you can use either keyID or its corresponding email address.
+#
+# For more information on using fwknop with GnuPG keys, see the following
+# link: http://www.cipherdyne.org/fwknop/docs/gpghowto.html
+fwknop_decrypt_id:
+
+# Specify the decryption password for the gpg key defined by the
+# fwknop_decrypt_id above.  This is a required field for gpg-based
+# authentication.
+fwknop_decrypt_pw:
+
+# With this setting set to 'Y',  fwknopd checks all GPG-encrypted SPA
+# messages for a signature (signed by the sender's key).  If the incoming
+# message is not signed, the decryption process will fail.  If not set, the
+# default is 'N'.
+fwknop_gpg_require_sig:
+
+# Setting this will allow fwknopd to accept incoming GPG-encrypted packets
+# that are signed, but the signature did not pass verification (i.e. the
+# signer key was expired, etc.).  This setting only applies if the
+# GPG_REQUIRE_SIG is also set to 'Y'.
+fwknop_ignore_sig_verify_error:
+
+# Define the default verbosity level the fwknop server should use.
+# A value of "0" is the default verbosity level. Setting it up to "1" or
+# higher will allow debugging messages to be displayed.
+fwknop_verbose:
+
+# Define the ethernet interface on which we will sniff packets. A value of
+# "eth0" is the default if no value is set.
+fwknop_pcap_interface:
+
+# Define the filter used for PCAP modes; we default to udp port 62201.
+# However, if an fwknop client uses the --rand-port option to send the
+# SPA packet over a random port, then this variable should be updated to
+# something like "udp dst portrange 10000-65535;".
+# Default is "udp port 62201".
+fwknop_pcap_filter:
+
+# This instructs fwknopd to not honor SPA packets that have an old time
+# stamp.  The value for "old" is defined by the {{ fwknop_max_spa_packet_age }} variable.
+# If this is set to "N", fwknopd will not use the client
+# time stamp at all.
+#
+# WARNING: client and server clocks MUST be within a good sync or you will be
+# confused when your packets aren't working.
+fwknop_enable_spa_packet_aging: 'Y'
+fwknop_max_spa_packet_age: '120'
+

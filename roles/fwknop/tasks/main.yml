@@ -1,0 +1,22 @@
+---
+- name: Install fwknop packages
+  dnf:
+    name: fwknop 
+    state: present
+
+- name: Configure fwknop
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/fwknop/{{ item }}"
+    mode: "0600"
+  with_items:
+    - access.conf
+    - fwknopd.conf 
+  notify:
+    - restart fwknopd daemon
+
+- name: Ensure fwknop daemon is running
+  service:
+    name: fwknopd
+    state: started
+    enabled: yes

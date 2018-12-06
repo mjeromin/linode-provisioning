@@ -1,0 +1,4 @@
+- name: restart ntp daemon
+  service:
+    name: ntpd
+    state: restarted

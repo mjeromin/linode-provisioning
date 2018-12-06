@@ -1,0 +1,10 @@
+---
+- name: Import local playbook
+  import_playbook: local.yml
+
+- name: Example42 
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  roles:
+    - ntp

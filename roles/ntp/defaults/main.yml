@@ -1,0 +1,2 @@
+pool_server: '2.fedora.pool.ntp.org'
+our_time_servers: []

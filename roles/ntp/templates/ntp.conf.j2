@@ -1,0 +1,48 @@
+# For more information about this file, see the ntp.conf(5) man page.
+
+# The file contains one value used to adjust the system clock frequency
+# after every system or service start. The directory is writable by ntpd.
+driftfile /var/lib/ntp/drift
+
+# Access control configuration; For more details, see:
+# * http://support.ntp.org/bin/view/Support/AccessRestrictions
+# * https://www.freebsd.org/cgi/man.cgi?query=ntp.conf&sektion=5&manpath=freebsd-release-ports
+#
+# Note that "restrict" applies to both servers and clients, so a configuration
+# that might be intended to block requests from certain clients could also end
+# up blocking replies from your own upstream servers.
+#
+# * kod:         a “Kiss-o'-death” packet is to be sent to reduce unwanted queries.
+# * limited:     deny service if the packet spacing violates the lower limits specified in the discard command.
+# * lowpriotrap: declare traps set by matching hosts to be low priority.
+# * nomodify:    options prevents any changes to the configuration.
+# * notrap:      option prevents ntpdc control message protocol traps.
+# * nopeer:      option prevents a peer association being formed.
+# * noepeer:     deny ephemeral peer requests, even if they come from an authenticated source.
+# * noquery:     option prevents ntpq and ntpdc queries, but not time queries, from being answered.
+# * noserve:     deny all packets except ntpq and ntpdc.
+# * notrust:     deny service unless a packet is cryptographically authenticated.
+# * version:     deny packets that do not match the current NTP version.
+restrict default notrap nomodify nopeer noquery
+
+# Local users may interrogate the ntp server more closely.
+restrict 127.0.0.1
+restrict ::1
+
+{% for time_server in our_time_servers %}
+# NTP server list.
+# Specify iburst here to speed up sync times on client startup
+server {{ time_server }} iburst
+
+{% endfor -%}
+{% if our_time_servers|length < 1 %}
+# Permit association with pool servers.
+restrict source nomodify notrap noepeer noquery
+
+# Use public servers from the pool.ntp.org project.
+# Please consider joining the pool (http://www.pool.ntp.org/join.html).
+pool {{ pool_server }} iburst
+
+# Reduce the maximum number of servers used from the pool.
+tos maxclock 5
+{% endif -%}

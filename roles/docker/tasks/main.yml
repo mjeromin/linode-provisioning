@@ -1,0 +1,21 @@
+- name: Ensure dnf-plugins-core is installed
+  dnf:
+    name: dnf-plugins-core
+    state: present
+
+- name: Ensure stable docker repo config is installed
+  command: dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+    warn: False
+
+- name: Ensure docker-ce is installed
+  dnf:
+    name: 'docker-ce'
+    state: present
+
+- name: Ensure docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: yes

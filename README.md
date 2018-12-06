@@ -1,5 +1,5 @@
 # linode-provisioning
-A collection of scripts for standing up [Linode](https://www.linode.com/) infra.
+A collection of scripts for standing up [Linode](https://www.linode.com/) infra. It's only been tested to run Fedora 28+ VMs.
 
 ## stage1.stackscript
 This script is meant to be submitted as a [StackScript](https://www.linode.com/stackscripts) on the Linode platform. It takes the following parameters:

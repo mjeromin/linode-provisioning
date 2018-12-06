@@ -5,7 +5,10 @@
   gather_facts: yes
   vars:
     timezone: 'EST5EDT'
-    schedule: '*/5 * * * *'
+    # Poll every 20 minutes for changes to ansible repo and apply them
+    poll_schedule: '*/20 * * * *'
+    # Run ansible daily regardless of changes (ie. enforcing mode)
+    run_schedule: '0 4 * * *'
     cron_user: root
     logfile: /var/log/ansible-pull.log
     workdir: /var/lib/ansible/local

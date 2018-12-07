@@ -1,0 +1,5 @@
+---
+- name: restart firewall daemon
+  service:
+    name: firewalld
+    state: restarted

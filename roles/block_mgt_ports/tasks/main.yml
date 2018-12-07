@@ -1,0 +1,32 @@
+---
+
+# The ansible firewalld module does not work in F28 due to an issue while transitioning Python2->Python3
+- name: Ensure cockpit service is blocked
+  shell: firewall-cmd --zone=FedoraServer --remove-service=cockpit --permanent && touch /etc/.fw_cockpit_disabled
+  args:
+    creates: /etc/.fw_cockpit_disabled
+  when: ansible_distribution == "Fedora" and ansible_distribution_version == "28"
+  notify:
+    - restart firewall daemon
+
+- name: Ensure ssh service is public blocked
+  shell: firewall-cmd --zone=FedoraServer --remove-service=ssh --permanent && touch /etc/.fw_ssh_disabled
+  args:
+    creates: /etc/.fw_ssh_disabled
+  when: ansible_distribution == "Fedora" and ansible_distribution_version == "28"
+  notify:
+    - restart firewall daemon
+
+- name: Disable open services
+  firewalld:
+    immediate: yes
+    permanent: yes
+    service: "{{ item }}"
+    state: disabled
+  with_items:
+    - ssh
+    - cockpit
+  when: ansible_distribution == "Fedora" and ansible_distribution_version != "28"
+  notify:
+    - restart firewall daemon
+

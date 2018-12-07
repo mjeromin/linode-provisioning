@@ -27,3 +27,4 @@
     - ntp
     - docker
     - fwknop
+    - block_mgt_ports

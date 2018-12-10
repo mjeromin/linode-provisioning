@@ -1,0 +1,10 @@
+- name: remap controlled_envelope_senders
+  shell: '/usr/sbin/postmap /etc/postfix/controlled_envelope_senders'
+
+- name: remap tls_policy 
+  shell: '/usr/sbin/postmap /etc/postfix/tls_policy'
+
+- name: reload postfix
+  service:
+    name: postfix
+    state: reloaded

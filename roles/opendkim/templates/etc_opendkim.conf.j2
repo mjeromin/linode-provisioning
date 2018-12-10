@@ -1,0 +1,47 @@
+## See for more details:
+# * opendkim.conf(5)
+# * /usr/share/doc/opendkim/opendkim.conf.sample
+# * /usr/share/doc/opendkim/INSTALL
+##
+
+PidFile	/var/run/opendkim/opendkim.pid
+
+##  Operating mode. Valid modes are s (sign), v (verify), and sv.
+Mode	s
+
+##  Log activity to the system log.
+Syslog	yes
+
+##  Log additional entries indicating successful signing or verification of messages.
+SyslogSuccess	yes
+
+##  If logging is enabled, include detailed logging about why or why not a message was
+##  signed or verified. This causes an increase in the amount of log data generated
+##  for each message, so set this to No (or comment it out) if it gets too noisy.
+LogWhy	yes
+
+UserID	opendkim:opendkim
+Socket	inet:8891@localhost
+Umask	002
+
+##  Add a DKIM-Filter header field to messages passing through this filter
+##  to identify messages it has processed.
+SoftwareHeader	yes
+
+## SIGNING OPTIONS
+
+##  Selects the canonicalization method(s) to be used when signing messages.
+# Note: relaxed canonicalization makes DKIM signatures more robust to trivial modifications in transit.
+Canonicalization	relaxed/relaxed
+
+# Map domains in From addresses to keys used to sign messages
+KeyTable	file:/etc/opendkim/KeyTable
+SigningTable	refile:/etc/opendkim/SigningTable
+
+##  Always oversign From (sign using actual From and a null From to prevent
+##  malicious signatures header fields (From and/or others) between the signer
+##  and the verifier.  From is oversigned by default in the Fedora package
+##  because it is often the identity key used by reputation systems and thus
+##  somewhat security sensitive.
+OversignHeaders	From
+

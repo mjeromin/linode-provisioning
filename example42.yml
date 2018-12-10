@@ -23,8 +23,16 @@
           31636231393266313265633262376334643239326435623633356165633237643739333431356361
           3766353962313861310a356364633234323139366435613162356339303931616162336332643161
           3530
+    dkim_mydomain: example42.sysfrog.net
+    postfix_mydomain: "{{ dkim_mydomain }}"
+    postfix_smtpd_banner: '$myhostname Sysfrog ESMTP service ready'
+    postfix_smtpd_tls_cert_file: /etc/letsencrypt/live/example42.sysfrog.net/fullchain.pem
+    postfix_smtpd_tls_key_file: /etc/letsencrypt/live/example42.sysfrog.net/privkey.pem
+
   roles:
     - ntp
     - docker
     - fwknop
     - block_mgt_ports
+    - opendkim
+    - postfix-smtp

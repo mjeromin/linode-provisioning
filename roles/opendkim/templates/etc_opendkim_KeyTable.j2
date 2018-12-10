@@ -1,0 +1,3 @@
+# OPENDKIM KEY TABLE
+
+{{ ansible_fqdn }}._domainkey.{{ dkim_mydomain }} {{ dkim_mydomain }}:{{ ansible_fqdn }}:/etc/opendkim/keys/{{ ansible_fqdn }}.private

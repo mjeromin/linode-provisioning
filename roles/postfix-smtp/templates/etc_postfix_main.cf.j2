@@ -1,0 +1,117 @@
+# See http://www.postfix.org/postconf.5.html or postconf(5) man page for more
+# configuration details.
+
+# Debugging SMTP - Uncomment when sending problems
+#debug_peer_list = xxx.xx.xx.xx
+
+# It is best practice to include the server name in the banner,
+# preferrably one with a matching PTR record
+smtpd_banner = {{ postfix_smtpd_banner }} 
+myhostname = {{ postfix_myhostname }} 
+mydomain = {{ postfix_mydomain }} 
+myorigin = {{ postfix_myorigin }}
+inet_interfaces = {{ postfix_inet_interfaces }}
+mynetworks = {{ postfix_mynetworks }} 
+mynetworks_style = {{ postfix_mynetworks_style }} 
+mydestination = {{ postfix_mydestination }} 
+relay_domains = {{ postfix_relay_domains }} 
+
+debug_peer_level = {{ postfix_debug_peer_level }} 
+mailbox_size_limit = {{ postfix_mailbox_size_limit }} 
+strict_rfc821_envelopes = yes
+disable_vrfy_command = yes
+unknown_address_reject_code  = 554
+unknown_hostname_reject_code = 554
+unknown_client_reject_code   = 554
+unknown_local_recipient_reject_code = 550
+
+# lookup table with the SASL login names that own the sender (MAIL FROM) addresses
+smtpd_sender_login_maps = hash:/etc/postfix/controlled_envelope_senders
+
+# HELO restrictions to weed out broken spambots
+smtpd_helo_required     = yes
+smtpd_helo_restrictions = 
+{% for rule in postfix_smtpd_helo_restrictions %}
+   {{ rule }}
+{% endfor %}
+
+smtpd_client_restrictions = 
+{% for rule in postfix_smtpd_client_restrictions %}
+   {{ rule }}
+{% endfor %}
+
+smtpd_sender_restrictions = 
+{% for rule in postfix_smtpd_sender_restrictions %}
+   {{ rule }}
+{% endfor %}
+
+smtpd_recipient_restrictions =
+{% for rule in postfix_smtpd_recipient_restrictions %}
+   {{ rule }}
+{% endfor %}
+
+smtpd_relay_restrictions = 
+{% for rule in postfix_smtpd_relay_restrictions %}
+   {{ rule }}
+{% endfor %}
+
+# block clients that speak too early
+smtpd_data_restrictions = 
+   reject_unauth_pipelining
+
+header_checks = regexp:/etc/postfix/header_checks
+mime_header_checks = regexp:/etc/postfix/mime_header_checks
+body_checks = regexp:/etc/postfix/body_checks
+
+# Limit denial of service attacks
+message_size_limit = 20480000
+default_process_limit = 100
+smtpd_client_connection_count_limit = 50
+smtpd_client_connection_rate_limit = 1000
+smtpd_client_message_rate_limit = 100
+smtpd_client_recipient_rate_limit = 100
+#header_size_limit = 51200
+smtp_recipient_limit = 100
+
+# SASL options
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_local_domain = {{ postfix_smtpd_sasl_local_domain }} 
+# Specify a list of security properties separated by comma or whitespace
+smtpd_sasl_security_options = {% for option in postfix_smtpd_sasl_security_options %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+# Specify a list of security properties (during TLS encrypted sessions) separated by comma or whitespace
+smtpd_sasl_tls_security_options = {% for option in postfix_smtpd_sasl_tls_security_options -%}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+smtpd_sasl_exceptions_networks = {{ postfix_smtpd_sasl_exceptions_networks }} 
+
+# TLS options for daemon
+smtpd_use_tls = yes
+# Use "smtpd_tls_loglevel = 3" only in case of problems.
+smtpd_tls_loglevel = {{ postfix_smtpd_tls_loglevel }} 
+# Mandatory TLS encryption
+smtpd_tls_auth_only = yes
+smtpd_tls_security_level = encrypt
+tls_ssl_options = NO_COMPRESSION
+tls_high_cipherlist = {% for option in postfix_tls_high_cipherlist %}{{option}}{% if not loop.last %}:{% endif %}{% endfor %} 
+tls_preempt_cipherlist = yes
+smtpd_tls_protocols = {% for option in postfix_smtpd_tls_protocols %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+smtpd_tls_mandatory_ciphers = {{ postfix_smtpd_tls_mandatory_ciphers }}
+smtpd_tls_mandatory_protocols = {% for option in postfix_smtpd_tls_mandatory_protocols %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+smtpd_tls_exclude_ciphers = {% for option in postfix_smtpd_tls_exclude_ciphers %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+smtpd_tls_cert_file = {{ postfix_smtpd_tls_cert_file }} 
+smtpd_tls_key_file = {{ postfix_smtpd_tls_key_file }} 
+# It is more secure to generate your own set of DH parameters with something like:
+# openssl dhparam -out /etc/postfix/dh2048.pem 2048
+# See also: http://www.postfix.org/FORWARD_SECRECY_README.html
+smtpd_tls_dh1024_param_file = /etc/postfix/dh2048.pem
+
+# TLS options for client
+smtp_tls_loglevel = {{ postfix_smtp_tls_loglevel }} 
+smtp_tls_security_level = {{ postfix_smtp_tls_security_level }} 
+smtp_tls_policy_maps = hash:/etc/postfix/tls_policy
+smtp_tls_mandatory_protocols = {% for option in postfix_smtp_tls_mandatory_protocols %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+smtp_tls_protocols = {% for option in postfix_smtp_tls_protocols %}{{option}}{% if not loop.last %},{% endif %}{% endfor %} 
+
+# DKIM options
+milter_default_action = accept
+milter_protocol = 2
+smtpd_milters = inet:localhost:8891
+non_smtpd_milters = inet:localhost:8891

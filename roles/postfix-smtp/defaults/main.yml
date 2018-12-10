@@ -1,0 +1,178 @@
+postfix_mydomain: example.com 
+postfix_smtpd_banner: '$myhostname Example ESMTP service ready'
+postfix_myhostname: "{{ ansible_fqdn }}"
+postfix_myorigin: '$mydomain'
+postfix_inet_interfaces: 'all'
+postfix_mynetworks: '127.0.0.0/8 [::1]/128'
+postfix_mynetworks_style: 'host'
+postfix_mydestination: '$myhostname, localhost.$mydomain, localhost'
+postfix_relay_domains:
+postfix_debug_peer_level: '2'
+postfix_mailbox_size_limit: '0'
+postfix_smtpd_helo_restrictions:
+  - 'reject_non_fqdn_helo_hostname,'
+  - 'reject_invalid_hostname,'
+  - 'reject_unknown_helo_hostname'
+
+# allow connections from trusted networks only
+postfix_smtpd_client_restrictions:
+  - 'permit_mynetworks,'
+  - 'permit_sasl_authenticated,'
+  - 'reject'
+
+# don't accept mail from domains that do not exist
+postfix_smtpd_sender_restrictions:
+  - 'reject_unknown_sender_domain,'
+  - 'reject_authenticated_sender_login_mismatch'
+
+postfix_smtpd_recipient_restrictions:
+  - 'reject_invalid_hostname,'
+  - 'reject_non_fqdn_hostname,'
+  - 'reject_non_fqdn_sender,'
+  - 'reject_non_fqdn_recipient,'
+  - 'reject_unknown_recipient_domain,'
+  - 'permit_mynetworks,'
+  - 'permit_sasl_authenticated'
+
+# local clients and authenticated clients may specify any destination domain
+postfix_smtpd_relay_restrictions:
+  - 'permit_mynetworks,'
+  - 'reject_authenticated_sender_login_mismatch,'
+  - 'permit_sasl_authenticated,'
+  - 'reject_unauth_destination'
+
+## SASL options
+postfix_smtpd_sasl_local_domain: '$mydomain'
+postfix_smtpd_sasl_security_options:
+  - 'noanonymous'
+  - 'noplaintext'
+  - 'noactive'
+  - 'nodictionary'
+  - 'forward_secrecy'
+postfix_smtpd_sasl_tls_security_options:
+  - 'noanonymous'
+postfix_smtpd_sasl_exceptions_networks: '$mynetworks'
+
+## TLS options for daemon
+postfix_smtpd_tls_loglevel: 2
+postfix_tls_high_cipherlist:
+  - 'ECDHE-ECDSA-AES256-GCM-SHA384'
+  - 'ECDHE-RSA-AES256-GCM-SHA384'
+  - 'ECDHE-ECDSA-CHACHA20-POLY1305'
+  - 'ECDHE-RSA-CHACHA20-POLY1305'
+  - 'ECDHE-ECDSA-AES128-GCM-SHA256'
+  - 'ECDHE-RSA-AES128-GCM-SHA256'
+  - 'ECDHE-ECDSA-AES256-SHA384'
+  - 'ECDHE-RSA-AES256-SHA384'
+  - 'ECDHE-ECDSA-AES128-SHA256'
+  - 'ECDHE-RSA-AES128-SHA256'
+postfix_smtpd_tls_protocols:
+  - '!SSLv2'
+  - '!SSLv3'
+  - '!TLSv1'
+  - '!TLSv1.1'
+postfix_smtpd_tls_mandatory_ciphers: 'high'
+postfix_smtpd_tls_mandatory_protocols:
+  - '!SSLv2'
+  - '!SSLv3'
+  - '!TLSv1'
+  - '!TLSv1.1'
+postfix_smtpd_tls_exclude_ciphers:
+  - 'aNULL'
+  - 'LOW'
+  - 'EXP'
+  - 'MEDIUM'
+  - 'ADH'
+  - 'AECDH'
+  - 'MD5'
+  - 'DSS'
+  - 'ECDSA'
+  - 'CAMELLIA128'
+  - '3DES'
+  - 'CAMELLIA256'
+  - 'RSA+AES'
+  - 'eNULL'
+
+# 
+postfix_smtpd_tls_cert_file: PLEASE INSTALL TLS CERT
+postfix_smtpd_tls_key_file: PLEASE INSTALL TLS PRIVATE KEY
+
+## TLS options for client
+postfix_smtp_tls_loglevel: '1'
+postfix_smtp_tls_security_level: 'may'
+postfix_smtp_tls_mandatory_protocols:
+  - '!SSLv2'
+  - '!SSLv3'
+  - '!TLSv1'
+  - '!TLSv1.1'
+postfix_smtp_tls_protocols:
+  - '!SSLv2'
+  - '!SSLv3'
+  - '!TLSv1'
+  - '!TLSv1.1'
+postfix_smtp_tls_policy:
+postfix_controlled_envelope_senders:
+postfix_master_services:
+  - { name: 'smtp', type: 'inet', private: 'n', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'smtpd' }
+  - name: 'submission'
+    type: 'inet'
+    private: 'n'
+    unpriv: '-'
+    chroot: 'n'
+    wakeup: '-'
+    maxproc: '-'
+    command: 'smtpd'
+    commandargs:
+      - '-o syslog_name=postfix/submission'
+      - '-o smtpd_tls_security_level=encrypt'
+      - '-o smtpd_sasl_auth_enable=yes'
+      - '-o smtpd_reject_unlisted_recipient=no'
+      - '-o smtpd_client_restrictions=$mua_client_restrictions'
+      - '-o smtpd_helo_restrictions=$mua_helo_restrictions'
+      - '-o smtpd_sender_restrictions=$mua_sender_restrictions'
+      - '-o smtpd_recipient_restrictions=permit_sasl_authenticated,reject'
+      - '-o milter_macro_daemon_name=ORIGINATING'
+  - name: smtps
+    type: 'inet'
+    private: 'n'
+    unpriv: '-'
+    chroot: 'n'
+    wakeup: '-'
+    maxproc: '-'
+    command: 'smtpd'
+    commandargs:
+      - '-o syslog_name=postfix/smtps'
+      - '-o smtpd_tls_wrappermode=yes'
+      - '-o smtpd_sasl_auth_enable=yes'
+      - '-o smtpd_reject_unlisted_recipient=no'
+      - '-o smtpd_client_restrictions=$mua_client_restrictions'
+      - '-o smtpd_helo_restrictions=$mua_helo_restrictions'
+      - '-o smtpd_sender_restrictions=$mua_sender_restrictions'
+      - '-o smtpd_recipient_restrictions=permit_sasl_authenticated,reject'
+      - '-o milter_macro_daemon_name=ORIGINATING'
+  #- { name: '628', type: 'inet', private: 'n', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'qmqpd' }
+  - { name: 'pickup', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '60', maxproc: '1', command: 'pickup' }
+  - { name: 'cleanup', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '0', command: 'cleanup' }
+  - { name: 'qmgr', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '300', maxproc: '1', command: 'qmgr' }
+  #- { name: 'qmgr', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '300', maxproc: '1', command: 'oqmgr' }
+  - { name: 'tlsmgr', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '1000?', maxproc: '1', command: 'tlsmgr' }
+  - { name: 'rewrite', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'trivial-rewrite' }
+  - { name: 'bounce', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '0', command: 'bounce' }
+  - { name: 'defer', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '0', command: 'bounce' }
+  - { name: 'trace', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '0', command: 'bounce' }
+  - { name: 'verify', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '1', command: 'verify' }
+  - { name: 'flush', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '1000?', maxproc: '0', command: 'flush' }
+  - { name: 'proxymap', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'proxymap' }
+  - { name: 'proxywrite', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '1', command: 'proxymap' }
+  - { name: 'smtp', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'smtp' }
+  - { name: 'relay', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'smtp' }
+  - { name: 'showq', type: 'unix', private: 'n', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'showq' }
+  - { name: 'error', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'error' }
+  - { name: 'retry', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'error' }
+  - { name: 'discard', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'discard' }
+  - { name: 'local', type: 'unix', private: '-', unpriv: 'n', chroot: 'n', wakeup: '-', maxproc: '-', command: 'local' }
+  - { name: 'virtual', type: 'unix', private: '-', unpriv: 'n', chroot: 'n', wakeup: '-', maxproc: '-', command: 'virtual' }
+  - { name: 'lmtp', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '-', command: 'lmtp' }
+  - { name: 'anvil', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '1', command: 'anvil' }
+  - { name: 'scache', type: 'unix', private: '-', unpriv: '-', chroot: 'n', wakeup: '-', maxproc: '1', command: 'scache' }
+

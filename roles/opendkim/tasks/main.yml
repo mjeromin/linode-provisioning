@@ -1,0 +1,33 @@
+---
+- name: Install OpenDKIM packages
+  dnf:
+    name: opendkim
+    state: present
+
+- name: Generate OpenDKIM SELECTOR key
+  shell: "/usr/sbin/opendkim-genkey -s {{ ansible_fqdn }} -D /etc/opendkim/keys"
+  args:
+    creates: "/etc/opendkim/keys/{{ ansible_fqdn }}.private"
+
+- name: Push DKIM public key to DNS TXT record via REST API (todo)
+  meta: noop
+
+- name: Configure OpenDKIM 
+  template:
+    src:   "{{ item.src }}"
+    dest:  "{{ item.dest }}"
+    mode:  "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  with_items:
+    - { src: 'etc_opendkim.conf.j2', dest: '/etc/opendkim.conf', mode: '0644', owner: 'root', group: 'root' }
+    - { src: 'etc_opendkim_KeyTable.j2', dest: '/etc/opendkim/KeyTable', mode: '0640', owner: 'opendkim', group: 'opendkim' }
+    - { src: 'etc_opendkim_SigningTable.j2', dest: '/etc/opendkim/SigningTable', mode: '0640', owner: 'opendkim', group: 'opendkim' }
+  notify:
+    - restart opendkim milter
+
+- name: Ensure OpenDKIM milter is started
+  service:
+    name: opendkim
+    state: started
+    enabled: yes

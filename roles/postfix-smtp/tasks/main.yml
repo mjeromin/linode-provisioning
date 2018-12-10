@@ -1,0 +1,88 @@
+---
+- name: Install SMTP-related packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - postfix
+    - cyrus-sasl
+    - certbot
+
+# F28 installs idna-2.8 and a version of certbot that only accepts 2.5 <= idna < 2.8
+- name: Install idna for certbot dependancy (F28)
+  pip:
+    name: 'idna<2.8'
+    executable: /usr/local/bin/pip3
+  when: ansible_distribution == "Fedora" and ansible_distribution_version == "28"
+
+- name: Install certbot 90-day renewal cronjob (todo)
+  # this might be difficult with manual certs, ie. certbot certonly --manual --preferred-challenges dns -d {{ ansible_hostname }}
+  meta: noop
+
+- name: Switch configured SASL backend from saslauthd to sasldb
+  lineinfile:
+    path: /etc/sasl2/smtpd.conf 
+    regexp: '^pwcheck_method:.*' 
+    line: 'pwcheck_method: auxprop'
+
+- name: Generate empty sasldb
+  # adding a new user automatically creates the db file, then removing that same user empties it.
+  # See saslpasswd2 manpage for details.
+  shell: '/usr/bin/yes | /usr/sbin/saslpasswd2 -p -c testuser -f /etc/sasldb2 && /usr/sbin/saslpasswd2 -d testuser -f /etc/sasldb2'
+  args:
+    creates: /etc/sasldb2
+
+- name: Ensure sasldb permissions
+  file:
+    path: /etc/sasldb2
+    mode: '0640'
+    owner: root
+    group: postfix
+
+# It is more secure to generate your own set of DH parameters.
+# See also: http://www.postfix.org/FORWARD_SECRECY_README.html
+- name: Generate DH parameters
+  shell: '/usr/bin/openssl dhparam -out /etc/postfix/dh2048.pem 2048'
+  args:
+    creates: '/etc/postfix/dh2048.pem'
+
+- name: Configure controlled envelope senders
+  template:
+    src: 'etc_postfix_controlled_envelope_senders.j2'
+    dest: '/etc/postfix/controlled_envelope_senders'
+    mode: '0640'
+    owner: root
+    group: root
+  notify:
+    - remap controlled_envelope_senders
+    - reload postfix
+
+- name: Configure TLS policy maps 
+  template:
+    src: 'etc_postfix_tls_policy.j2'
+    dest: '/etc/postfix/tls_policy'
+    mode: '0640'
+    owner: root
+    group: root
+  notify:
+    - remap tls_policy 
+    - reload postfix
+
+- name: Configure Postfix
+  template:
+    src:   "{{ item.src }}"
+    dest:  "{{ item.dest }}"
+    mode:  '0644' 
+    owner: root 
+    group: root
+  with_items:
+    - { src: 'etc_postfix_main.cf.j2', dest: '/etc/postfix/main.cf' }
+    - { src: 'etc_postfix_master.cf.j2', dest: '/etc/postfix/master.cf' }
+  notify:
+    - reload postfix
+
+- name: Ensure Postfix services are started
+  service:
+    name: postfix
+    state: started
+    enabled: yes

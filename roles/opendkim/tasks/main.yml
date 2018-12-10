@@ -1,6 +1,6 @@
 ---
 - name: Install OpenDKIM packages
-  dnf:
+  package:
     name: opendkim
     state: present
 
